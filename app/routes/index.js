@@ -99,4 +99,21 @@ router.get('/status', async (req, res) => {
     }
 })
 
+
+//?SignIn page
+router.get('/log-in', async (req, res) => {
+    try {
+
+        res.render('signin');  //* returning only json data of disruption.
+
+
+        
+
+
+    } catch (error) { //! if any error happens inside try block,  this block will catch it and return value as error
+        console.log(error)
+        res.status(500).json({ error: 'Internal server error' })
+    }
+})
+
 module.exports = router
