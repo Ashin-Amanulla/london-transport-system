@@ -84,13 +84,13 @@ router.use('/auth', require('./auth'))
 
 
 
-router.get('/personal/:email', isAuthenticated, async function (req, res) {
+router.get('/personal/:email',  async function (req, res) {
     try {
         const email = req.params.email;
         const [rows] = await query('SELECT * FROM users WHERE email = ?', [email]);
         const user = rows;
-        console.log('user', user.routes)
-        let data = user.routes
+        console.log('user', user.routes || [])
+        let data = user.routes || []
 
 
         const lines = await getAllData();
