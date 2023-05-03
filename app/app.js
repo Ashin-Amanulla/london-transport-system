@@ -5,10 +5,16 @@ const logger = require('morgan') //? to  log requests coming from browser/client
 const helmet = require("helmet"); //?Using helmet can help improve the security of your application with minimal effort.   protect your app against common web vulnerabilities, such as XSS and CSRF attacks.
 const cors = require('cors') //? to enable Cross-Origin Resource Sharing (CORS) in your Express app.
 const compression = require('compression') //? to compress the size of data before sending as response to client. resulting in faster page load times and reduced bandwidth costs.
-
+const session = require('express-session'); // to track user
 
 // Create express app
 const app = express();
+app.use(session({
+  secret: 'your-secret-key',
+  resave: true,
+  saveUninitialized: true,
+  cookie: { secure: false } // Set this to true if using HTTPS
+}));
 
 // Set the Content Security Policy
 app.use(helmet.contentSecurityPolicy({
@@ -33,8 +39,7 @@ app.use(express.static(path.join(__dirname, 'static'))); //tells Node.js that we
 app.set('views', path.join(__dirname, 'views')) //?we tell Node.js what the source of our templates is. Now, Node.js knows where to look for our pug templates.
 app.set('view engine', 'ejs')  //? telling NodeJs what engine to use to render the template. In our case PUG.
 
-// Get the functions in the db.js file to use
-const db = require('./services/db');
+
 
 
 

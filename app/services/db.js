@@ -20,8 +20,14 @@ const pool = mysql.createPool(config.db);
 
 // Utility function to query the database
 async function query(sql, params) {
+  try {
     const [rows, fields] = await pool.execute(sql, params);
     return rows;
+  } catch (error) {
+    console.error(`Error executing query "${sql}" with params ${params}: ${error.message}`);
+    throw error;
+  }
+    
 }
 
 

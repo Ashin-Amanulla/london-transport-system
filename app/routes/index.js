@@ -3,6 +3,15 @@ const router = express.Router();
 const axios = require('axios'); //axios is used to make HTTP requests in NodeJs with the API
 const path = require('path')
 const getRandomColor = require('../helpers/randomColor')
+// Get the functions in the db.js file to use
+const { query } = require('../services/db');
+const getAllData = require('../controllers/getAlldata');
+const isAuthenticated = require('../helpers/authentication');
+
+
+
+
+
 
 
 
@@ -12,48 +21,9 @@ const getRandomColor = require('../helpers/randomColor')
 router.get('/', async (req, res) => {
     try {
 
-        // Here we are requesting data related to tube, tram, elizabeth-line, dlr and overground seperately beacuse 
-        // thats how their api is designed. After getting the data individually , we club hem and send it to front end as a single file for our convinience.
-        // while sending we only took required data (not sending other details that we get from the api) 
+        const lines = await getAllData();
 
-        const data =[];  // we club all requested data in this array
-
-        let url1 = 'https://api.tfl.gov.uk/Line/Mode/tube/Status'
-        const response = await axios.get(url1);
-        const tubeData = response.data;
-        data.push(...tubeData) //pushing tube related data into data array
-
-        let url2 = 'https://api.tfl.gov.uk/Line/Mode/dlr/Status'
-        const response2 = await axios.get(url2);
-        const dlrData = response2.data;
-        data.push(...dlrData) //pushing dlr related data into data array
-
-
-        let url3 = 'https://api.tfl.gov.uk/Line/Mode/elizabeth-line/Status'
-        const response3 = await axios.get(url3);
-        const elizaData = response3.data;
-        data.push(...elizaData) //pushing elizabeth train related data into data array
-
-
-        let url4 = 'https://api.tfl.gov.uk/Line/Mode/overground/Status'
-        const response4 = await axios.get(url4);
-        const overgroundData = response4.data;
-        data.push(...overgroundData) //pushing overground rail related data into data array
-
-        let url5 = 'https://api.tfl.gov.uk/Line/Mode/tram/Status'
-        const response5 = await axios.get(url5);
-        const tramData = response5.data;
-        data.push(...tramData) //pushing tram related data into data array
-
-
-        const lines = data.map(line => ({  // before sending data to front end we select the data we require, ignoring others.
-            name: line.name,
-            modeName:line.modeName,
-            lineStatuses:line.lineStatuses,
-            lineId: line.id
-          
-        }));
-        res.render('index', { lines,getRandomColor }); // sending a function getRandom color to front end so that cards gets different color
+        res.render('index', { lines, getRandomColor }); // sending a function getRandom color to front end so that cards gets different color
     } catch (error) {
         console.error(error);
         res.status(500).send('Oops! Something went wrong.');
@@ -77,12 +47,12 @@ router.get('/status', async (req, res) => {
         const disruption = data.map(line => ({  // before sending data to front end we select the data we require, ignoring others.
             lineId: line.id,
             name: line.name,
-            modeName:line.modeName,
-            statusSeverityDescription:line.lineStatuses[0].statusSeverityDescription,
-          reason:line.lineStatuses[0]?.reason,
-          additionalInfo:line.lineStatuses[0].disruption?.additionalInfo,
-          from:line.lineStatuses[0].validityPeriods[0]?.fromDate,
-          to:line.lineStatuses[0].validityPeriods[0]?.toDate
+            modeName: line.modeName,
+            statusSeverityDescription: line.lineStatuses[0].statusSeverityDescription,
+            reason: line.lineStatuses[0]?.reason,
+            additionalInfo: line.lineStatuses[0].disruption?.additionalInfo,
+            from: line.lineStatuses[0].validityPeriods[0]?.fromDate,
+            to: line.lineStatuses[0].validityPeriods[0]?.toDate
 
         }));
 
@@ -90,7 +60,7 @@ router.get('/status', async (req, res) => {
         res.render('status', { disruption });  //* returning only json data of disruption.
 
 
-        
+
 
 
     } catch (error) { //! if any error happens inside try block,  this block will catch it and return value as error
@@ -98,22 +68,118 @@ router.get('/status', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' })
     }
 })
-
 
 //?SignIn page
-router.get('/log-in', async (req, res) => {
+router.get('/login', async (req, res) => {
     try {
-
-        res.render('signin');  //* returning only json data of disruption.
-
-
-        
-
-
+        res.render('signin', { error: null });  //* returning only json data of disruption.
     } catch (error) { //! if any error happens inside try block,  this block will catch it and return value as error
         console.log(error)
         res.status(500).json({ error: 'Internal server error' })
     }
 })
+
+
+router.use('/auth', require('./auth'))
+
+
+
+router.get('/personal/:email', isAuthenticated, async function (req, res) {
+    try {
+        const email = req.params.email;
+        const [rows] = await query('SELECT * FROM users WHERE email = ?', [email]);
+        const user = rows;
+        console.log('user', user.routes)
+        let data = user.routes
+
+
+        const lines = await getAllData();
+        const dropDowns = lines.filter((line) => !data.some((r) => r === line.name))
+        const selected = lines.filter((line) => data.some((r) => r === line.name))
+        res.render('personal', { email: email, lines: selected, dropDowns: dropDowns, getRandomColor });  //* returning only json data of disruption.
+
+    } catch (error) {
+        console.log(error);
+        res.send(error);
+    }
+
+});
+
+
+
+router.post('/addRoute/:email', async (req, res) => {
+
+
+    try {
+        const { selectedRoute } = req.body;
+        const email = req.params.email;
+        // Get the user's current routes array from the database
+        const [rows] = await query('SELECT * FROM users WHERE email = ?', [email]);
+        const user = rows;
+        console.log('user', user.routes)
+
+        const routes = user.routes || [];
+        console.log('selected routes', routes)
+        // Add the selected route to the user's routes array
+        routes.push(selectedRoute);
+
+        // Update the user's routes array in the database
+        await query('UPDATE users SET routes = ? WHERE email = ?', [JSON.stringify(routes || null), email]);
+
+        // Send a response indicating success
+        res.sendStatus(200);
+    } catch (error) {
+        console.error(error);
+        res.sendStatus(500);
+    }
+});
+
+
+router.get('/deleteRoute/:email', async (req, res) => {
+
+
+    try {
+        const routeName = req.query.routeName;
+        const email = req.params.email;
+        console.log(routeName, email)
+        // Get the user's current routes array from the database
+        const [rows] = await query('SELECT * FROM users WHERE email = ?', [email]);
+        const user = rows;
+        console.log('user', user.routes)
+
+        let routes = user.routes || [];
+        console.log('before routes', routes)
+        // Delete the selected route to the user's routes array
+
+        routes = routes.filter(e => e !== routeName)
+
+        // Update the user's routes array in the database
+        await query('UPDATE users SET routes = ? WHERE email = ?', [JSON.stringify(routes || null), email]);
+
+        // Send a response indicating success
+        res.status(200).redirect(`/personal/${email}`);  //* returning personal page
+    } catch (error) {
+        console.error(error);
+        res.sendStatus(500);
+    }
+});
+
+
+router.get('/logout', async (req, res) => {
+
+    try {
+        req.session.destroy();
+        req.session = null; 
+        res.sendStatus(200);
+        } catch (error) {
+
+        console.error(error);
+        res.sendStatus(500);
+
+    }
+   
+     
+});
+
 
 module.exports = router
