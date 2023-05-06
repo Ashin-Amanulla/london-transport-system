@@ -14,6 +14,7 @@ const isAuthenticated = require('../helpers/authentication');
 
 
 
+//!Sprint2 ----------------------------------------------------------------
 
 //? First Page  router
 
@@ -30,7 +31,10 @@ router.get('/', async (req, res) => {
     }
 });
 
+//!----------------------------------------------------------------
 
+
+//!Sprint3 ----------------------------------------------------------------
 
 //? Router to find a line status in a specific line
 
@@ -44,7 +48,7 @@ router.get('/status', async (req, res) => {
         const data = response.data //? we just want the data from the API . so filtering out the meta data such as network status, contents etc...
 
 
-        const disruption = data.map(line => ({  // before sending data to front end we select the data we require, ignoring others.
+        const disruption = data.map(line => ({  //* Sprint 3 req:- before sending data to front end we select the data we require (buisness logic), ignoring others.
             lineId: line.id,
             name: line.name,
             modeName: line.modeName,
@@ -69,7 +73,12 @@ router.get('/status', async (req, res) => {
     }
 })
 
-//?SignIn page
+
+//!----------------------------------------------------------------
+
+//!Sprint4 &5 (interlinked) ----------------------------------------------------------------
+
+//?SignIn page  
 router.get('/login', async (req, res) => {
     try {
         res.render('signin', { error: null });  //* returning only json data of disruption.
@@ -78,7 +87,6 @@ router.get('/login', async (req, res) => {
         res.status(500).json({ error: 'Internal server error' })
     }
 })
-
 
 router.use('/auth', require('./auth'))
 
@@ -180,6 +188,7 @@ router.get('/logout', async (req, res) => {
    
      
 });
+//! ----------------------------------------------------------------
 
 
 module.exports = router
